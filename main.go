@@ -12,6 +12,13 @@ import (
 )
 
 var ipTablesExecutable (string)
+var allowPermanentRules bool
+var exposedPortsStartRange int
+var exposedPortsEndRange int
+
+func loadEnviromentVariables() {
+
+}
 
 // Main function
 func main() {
