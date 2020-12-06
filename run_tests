@@ -1,4 +1,2 @@
 #!/bin/sh
-export FORWARD_PORT_POOL_START=20
-export FORWARD_PORT_POOL_END=30
 go test -race ./...

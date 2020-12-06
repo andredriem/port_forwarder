@@ -38,6 +38,12 @@ func (e *PortAllocationPoolError) Error() string {
 		return fmt.Sprintf("PoolStart must be between 1 and 65535")
 	case POOL_END_OUT_OF_RANGE:
 		return fmt.Sprintf("PoolEnd must be between 1 and 65535")
+	case NO_PORT_AVAILABLE:
+		return fmt.Sprintf("Thera are no ports available")
+	case PORT_NOT_AVAILABLE:
+		return fmt.Sprintf("The requestes port is not available")
+	case PORT_OUT_OF_RANGE:
+		return fmt.Sprintf("The reuqested port is out of the configured range")
 	default:
 		return fmt.Sprintf("Unable to determine the error cause")
 	}

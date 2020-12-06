@@ -14,6 +14,17 @@ import (
 )
 
 var validate *validator.Validate
+var ipTablesExecutable (string)
+
+func init() {
+	validate = validator.New()
+	validate.RegisterValidation("ttlCustomValidator", ttlCustomValidator)
+	var err error
+	ipTablesExecutable, err = exec.LookPath("iptables")
+	if err != nil {
+		panic(err)
+	}
+}
 
 type Redirect struct {
 	DestIp        string `json:"destIp" validate:"ipv4"`
@@ -53,10 +64,12 @@ func NewRedirectFromJson(httpBody io.Reader) (*Redirect, error) {
 	_ = json.NewDecoder(httpBody).Decode(&aRedirect)
 	err = validate.Struct(&aRedirect)
 
-	return &aRedirect, err
-}
+	if err != nil {
+		return nil, err
+	}
 
-var ipTablesExecutable (string)
+	return &aRedirect, nil
+}
 
 func (redirect *Redirect) AddRedirectToFirewall() error {
 	addPortCommand := exec.Cmd{
@@ -141,9 +154,4 @@ func ttlCustomValidator(fl validator.FieldLevel) bool {
 	}
 
 	return false
-}
-
-func init() {
-	validate = validator.New()
-	validate.RegisterValidation("ttlCustomValidator", ttlCustomValidator)
 }
