@@ -17,9 +17,9 @@ var validate *validator.Validate
 
 type Redirect struct {
 	DestIp        string `json:"destIp" validate:"ipv4"`
-	DestPort      int    `json:"destPort" validate:"gte=1,lte=4096"`
+	DestPort      int    `json:"destPort" validate:"gte=1,lte=65535"`
 	ForwaredIp    string `json:"forwaredIp" validate:"ipv4"`
-	ForwardedPort int    `json:"forwardedPort" validate:"gte=1,lte=4096"`
+	ForwardedPort int    `json:"forwardedPort" validate:"gte=1,lte=65535"`
 	TtlInSeconds  int    `json:"ttlInSeconds" validate:"ttlCustomValidator"`
 }
 

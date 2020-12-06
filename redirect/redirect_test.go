@@ -40,7 +40,7 @@ func TestRedirectStructInitialization(t *testing.T) {
 	assertNumberOfErrors(t, err, 1)
 
 	// Invalid Port above limits
-	_, err = NewRedirect("192.168.22.1", 9999, "1.1.1.1", 70, 900)
+	_, err = NewRedirect("192.168.22.1", 9990889, "1.1.1.1", 70, 900)
 	assertNumberOfErrors(t, err, 1)
 
 	// Invalid TTs
