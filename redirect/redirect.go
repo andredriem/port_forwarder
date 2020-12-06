@@ -58,10 +58,10 @@ func NewRedirectFromJson(httpBody io.Reader) (*Redirect, error) {
 
 var ipTablesExecutable (string)
 
-func AddRedirectToFirewall(redirect *Redirect) error {
+func (redirect *Redirect) AddRedirectToFirewall() error {
 	addPortCommand := exec.Cmd{
 		Path:   ipTablesExecutable,
-		Args:   iptablesArguments(AddRuleMode, redirect),
+		Args:   redirect.iptablesArguments(AddRuleMode),
 		Stdout: os.Stdout,
 		Stderr: os.Stdout,
 	}
@@ -76,16 +76,16 @@ func AddRedirectToFirewall(redirect *Redirect) error {
 	duration, _ := time.ParseDuration(strconv.Itoa(redirect.TtlInSeconds) + "s")
 
 	time.AfterFunc(duration, func() {
-		RemoveRedirectFromFirewall(redirect)
+		redirect.RemoveRedirectFromFirewall()
 	})
 
 	return err
 }
 
-func RemoveRedirectFromFirewall(redirect *Redirect) error {
+func (redirect *Redirect) RemoveRedirectFromFirewall() error {
 	removePortCommand := exec.Cmd{
 		Path:   ipTablesExecutable,
-		Args:   iptablesArguments(RemoveRuleMode, redirect),
+		Args:   redirect.iptablesArguments(RemoveRuleMode),
 		Stdout: os.Stdout,
 		Stderr: os.Stdout,
 	}
@@ -100,7 +100,7 @@ func RemoveRedirectFromFirewall(redirect *Redirect) error {
 	return err
 }
 
-func iptablesArguments(ruleMode RuleMode, redirect *Redirect) []string {
+func (redirect *Redirect) iptablesArguments(ruleMode RuleMode) []string {
 
 	operationString := "-D"
 	if ruleMode == AddRuleMode {
