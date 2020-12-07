@@ -8,8 +8,8 @@ import (
 	"os"
 	"strconv"
 
-	"./port_allocation_pool"
-	"./redirect"
+	"port_forwarder/port_allocation_pool"
+	"port_forwarder/redirect"
 
 	"github.com/gorilla/mux"
 )
