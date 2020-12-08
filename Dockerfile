@@ -12,5 +12,6 @@ RUN go mod download
 # Copy remaind
 COPY . .
 RUN go build -v -o app
+RUN pwd
 
 CMD ["./app"]

@@ -1,4 +1,4 @@
-package port_forwarder
+package main
 
 import (
 	"fmt"
