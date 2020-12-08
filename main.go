@@ -1,4 +1,4 @@
-package main
+package port_forwarder
 
 import (
 	"encoding/json"
@@ -18,12 +18,24 @@ var ipTablesExecutable (string)
 var allowPermanentRules bool
 var exposedPortsStartRange int
 var exposedPortsEndRange int
+var serverPort int
 var exposedPortAllocationPool *port_allocation_pool.PortAllocationPool
+var localIp = "127.0.0.1"
 
 func loadEnviromentVariables() {
 	// Ensure all enviroment vairables are loaded correctly
 	var err error
 	var tempExposedPortRange int64
+
+	var tempServerPort int64
+	tempServerPort, err = strconv.ParseInt(os.Getenv("SERVER_PORT"), 10, 64)
+	if err != nil {
+		panic(fmt.Sprintf("failed to convert SERVER_PORT to integer"))
+	}
+	serverPort = int(tempServerPort)
+	if !(1 <= serverPort || serverPort <= 65535) {
+		panic("SERVER_PORT must be a number between 1 and 65535")
+	}
 
 	allowPermanentRules, err = strconv.ParseBool(os.Getenv("ALLOW_PERMANENT_RULES"))
 	if err != nil {
@@ -43,56 +55,79 @@ func loadEnviromentVariables() {
 	exposedPortsEndRange = int(tempExposedPortRange)
 }
 
-// Main function
-func main() {
+func initializeGlobalVariables() {
 	var err error
-	loadEnviromentVariables()
-
 	exposedPortAllocationPool, err = port_allocation_pool.NewPortAllocationPool(exposedPortsStartRange, exposedPortsEndRange)
 	if err != nil {
 		switch err.(*port_allocation_pool.PortAllocationPoolError).Cause {
 		case port_allocation_pool.NEGATIVE_PORT_RANGE:
-			panic("EXPOSED_PORT_END_RANGE mus be bigger than EXPOSED_PORT_START_RANGE")
+			panic("EXPOSED_PORT_END_RANGE must be bigger than EXPOSED_PORT_START_RANGE")
 		case port_allocation_pool.POOL_START_OUT_OF_RANGE:
-			panic("EXPOSED_PORT_START_RANGE mus be a number between 1 and 65535")
+			panic("EXPOSED_PORT_START_RANGE must be a number between 1 and 65535")
 		case port_allocation_pool.POOL_END_OUT_OF_RANGE:
 			panic("EXPOSED_PORT_END_RANGE mus be a number between 1 and 65535")
 		default:
 			panic("UNKOWN ERROR")
 		}
 	}
+}
+
+func prepareApplication() {
+	loadEnviromentVariables()
+	initializeGlobalVariables()
+}
+
+// Main function
+func main() {
+	prepareApplication()
 
 	r := mux.NewRouter()
 
 	// Route handles & endpoints
-	r.HandleFunc("/create_port_forward", createPortForward).Methods("POST")
+	r.HandleFunc("/allocate_random_port", allocateRandomPort).Methods("POST")
 
 	// Start server
-	log.Fatal(http.ListenAndServe(":3000", r))
+	log.Fatal(http.ListenAndServe(fmt.Sprintf(":%d", serverPort), r))
 }
 
-func createPortForward(w http.ResponseWriter, r *http.Request) {
-	var err error
+func allocateRandomPort(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "application/json")
+	type params struct {
+		DestIp       string `json:"destIp"`
+		DestPort     int    `json:"destPort"`
+		TtlInSeconds int    `json:"ttlInSeconds"`
+	}
 
-	// Parse redirect object
-	aRedirect, err := redirect.NewRedirectFromJson(r.Body)
+	var err error
+	p := params{}
+
+	//Decode params
+	err = json.NewDecoder(r.Body).Decode(&p)
 	if err != nil {
 		w.WriteHeader(http.StatusBadRequest)
 		json.NewEncoder(w).Encode("")
 		return
 	}
 
-	// Register redirect port in pool
-	err = exposedPortAllocationPool.AllocatePort(aRedirect.ForwardedPort)
+	//Allocate port
+	allocatedPort, err := exposedPortAllocationPool.AllocateRandomPort()
 	if err != nil {
 		w.WriteHeader(http.StatusInternalServerError)
 		json.NewEncoder(w).Encode("")
 		return
 	}
 
-	// Effective register port in iptables
-	err = aRedirect.AddRedirectToFirewall()
+	//Build redirect
+	aRedirect, err := redirect.NewRedirect(p.DestIp, p.DestPort, localIp, allocatedPort, p.TtlInSeconds)
+	if err != nil {
+		w.WriteHeader(http.StatusInternalServerError)
+		json.NewEncoder(w).Encode("")
+		exposedPortAllocationPool.DeallocatePort(allocatedPort)
+		return
+	}
+
+	//Add rule
+	err = aRedirect.AddRedirectToFirewall(exposedPortAllocationPool)
 	if err != nil {
 		w.WriteHeader(http.StatusInternalServerError)
 		json.NewEncoder(w).Encode("")
@@ -101,5 +136,5 @@ func createPortForward(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	json.NewEncoder(w).Encode("")
+	json.NewEncoder(w).Encode(fmt.Sprintf("{\"port\": %d}", allocatedPort))
 }

@@ -1,4 +1,4 @@
 #!/bin/sh
 docker build . --tag test-container
-docker run  -e ALLOW_PERMANENT_RULES=false -e EXPOSED_PORT_START_RANGE=10 -e EXPOSED_PORT_END_RANGE=200 --cap-add=NET_ADMIN --cap-add=NET_RAW test-container sh -c "go test -race ./..."
+docker run  -e SERVER_PORT=80 -e ALLOW_PERMANENT_RULES=false -e EXPOSED_PORT_START_RANGE=10 -e EXPOSED_PORT_END_RANGE=200 --cap-add=NET_ADMIN --cap-add=NET_RAW test-container sh -c "go test ./... ; iptables-save"
 

@@ -7,6 +7,7 @@ import (
 	"log"
 	"os"
 	"os/exec"
+	"port_forwarder/port_allocation_pool"
 	"strconv"
 	"time"
 
@@ -71,7 +72,7 @@ func NewRedirectFromJson(httpBody io.Reader) (*Redirect, error) {
 	return &aRedirect, nil
 }
 
-func (redirect *Redirect) AddRedirectToFirewall() error {
+func (redirect *Redirect) AddRedirectToFirewall(portAllocationPool *port_allocation_pool.PortAllocationPool) error {
 	addPortCommand := exec.Cmd{
 		Path:   ipTablesExecutable,
 		Args:   redirect.iptablesArguments(AddRuleMode),
@@ -89,13 +90,13 @@ func (redirect *Redirect) AddRedirectToFirewall() error {
 	duration, _ := time.ParseDuration(strconv.Itoa(redirect.TtlInSeconds) + "s")
 
 	time.AfterFunc(duration, func() {
-		redirect.RemoveRedirectFromFirewall()
+		redirect.RemoveRedirectFromFirewall(portAllocationPool)
 	})
 
 	return err
 }
 
-func (redirect *Redirect) RemoveRedirectFromFirewall() error {
+func (redirect *Redirect) RemoveRedirectFromFirewall(portAllocationPool *port_allocation_pool.PortAllocationPool) error {
 	removePortCommand := exec.Cmd{
 		Path:   ipTablesExecutable,
 		Args:   redirect.iptablesArguments(RemoveRuleMode),
@@ -109,6 +110,8 @@ func (redirect *Redirect) RemoveRedirectFromFirewall() error {
 	if err != nil {
 		log.Print(err)
 	}
+
+	portAllocationPool.DeallocatePort(redirect.ForwardedPort)
 
 	return err
 }
@@ -126,19 +129,20 @@ func (redirect *Redirect) iptablesArguments(ruleMode RuleMode) []string {
 		"nat",
 		operationString,
 		"PREROUTING",
-		"-d",
-		redirect.DestIp + "/32",
+		//		"-d",
+		//		redirect.ForwaredIp + "/32",
 		"-p",
 		"tcp",
 		"-m",
 		"tcp",
 		"--dport",
-		strconv.Itoa(redirect.DestPort),
+		strconv.Itoa(redirect.ForwardedPort),
 		"-j",
 		"DNAT",
 		"--to-destination",
-		redirect.ForwaredIp + ":" + strconv.Itoa(redirect.ForwardedPort),
+		redirect.DestIp + ":" + strconv.Itoa(redirect.DestPort),
 	}
+
 }
 
 func ttlCustomValidator(fl validator.FieldLevel) bool {
