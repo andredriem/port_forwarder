@@ -23,8 +23,8 @@ app:
   - EXPOSED_PORT_START_RANGE=5000
   - EXPOSED_PORT_END_RANGE=6000
   cap_add:
-  - SYS_ADMIN
-  - DAC_READ_SEARCH
+  - NET_ADMIN
+  - NET_RAW
 ```
 
 # Quick example
