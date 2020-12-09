@@ -3,7 +3,8 @@ Port_forwarder is a rest-api application made to temporarily expose any networks
 
 # Setup
 Aside from building the container, the following capabilities must be added so the service can run properly: NET_ADMIN and NET_RAW
-Also there are four environmental variables that must be set:
+
+There are four environmental variables that must be set:
 * SERVER_PORT the port where the server will run
 * ALLOW_PERMANENT_RULES if the server allows the creation of permanent rules
 * EXPOSED_PORT_START_RANGE the starting (inclusive) range from the ports exposed by the container
@@ -14,7 +15,7 @@ An example docker-compose file of how to correctly setup the server:
 app:
   build: .
   ports:
-    - "5000:6000"
+    - "5000-6000:5000-6000"
   restart: always
   environment:
   - SERVER_PORT=80
