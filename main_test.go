@@ -39,19 +39,19 @@ func TestAllocateRandomPort(t *testing.T) {
 
 	//test invalid ip
 	w := executeAllocateRandomPortRequest("192.66.3.999", 20, 20000)
-	if w.Code != http.StatusInternalServerError {
+	if w.Code != http.StatusBadRequest {
 		t.Errorf("Request expected to return an error")
 	}
 
 	//test invalid destPort
 	w = executeAllocateRandomPortRequest("192.66.3.1", 9000000, 20000)
-	if w.Code != http.StatusInternalServerError {
+	if w.Code != http.StatusBadRequest {
 		t.Errorf("Request expected to return an error")
 	}
 
 	//test invalid ttl
 	w = executeAllocateRandomPortRequest("192.66.3.1", 20, -32)
-	if w.Code != http.StatusInternalServerError {
+	if w.Code != http.StatusBadRequest {
 		t.Errorf("Request expected to return an error")
 	}
 
@@ -66,7 +66,7 @@ func TestAllocateRandomPort(t *testing.T) {
 
 	//Next port should generate an error
 	w = executeAllocateRandomPortRequest("192.66.3.1", 20, 2)
-	if w.Code != http.StatusInternalServerError {
+	if w.Code != http.StatusServiceUnavailable {
 		t.Errorf("Request expected to return an error")
 	}
 

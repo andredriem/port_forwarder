@@ -104,24 +104,24 @@ func allocateRandomPort(w http.ResponseWriter, r *http.Request) {
 	//Decode params
 	err = json.NewDecoder(r.Body).Decode(&p)
 	if err != nil {
+		//Schema sent is invalid, return a bad response code
 		w.WriteHeader(http.StatusBadRequest)
-		json.NewEncoder(w).Encode("")
 		return
 	}
 
 	//Allocate port
 	allocatedPort, err := exposedPortAllocationPool.AllocateRandomPort()
 	if err != nil {
-		w.WriteHeader(http.StatusInternalServerError)
-		json.NewEncoder(w).Encode("")
+		// Server is in over-capacity, send a Service Unavailable response code
+		w.WriteHeader(http.StatusServiceUnavailable)
 		return
 	}
 
 	//Build redirect
 	aRedirect, err := redirect.NewRedirect(p.DestIp, p.DestPort, localIp, allocatedPort, p.TtlInSeconds)
 	if err != nil {
-		w.WriteHeader(http.StatusInternalServerError)
-		json.NewEncoder(w).Encode("")
+		//Validation has failed, send bad request
+		w.WriteHeader(http.StatusBadRequest)
 		exposedPortAllocationPool.DeallocatePort(allocatedPort)
 		return
 	}
@@ -129,8 +129,8 @@ func allocateRandomPort(w http.ResponseWriter, r *http.Request) {
 	//Add rule
 	err = aRedirect.AddRedirectToFirewall(exposedPortAllocationPool)
 	if err != nil {
+		// Something went wrong when adding the iptables rules, send a internal error response code
 		w.WriteHeader(http.StatusInternalServerError)
-		json.NewEncoder(w).Encode("")
 		// Reopens port to allocation since rule fails
 		exposedPortAllocationPool.DeallocatePort(aRedirect.ForwardedPort)
 		return
