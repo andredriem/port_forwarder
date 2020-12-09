@@ -28,7 +28,7 @@ app:
 ```
 
 # Quick example
-With a POST request to /allocate_random_por with the following json body
+With a POST request to **/allocate_random_por** with the following json body
 
 ```javascript
 {
