@@ -9,19 +9,25 @@ import (
 	"os/exec"
 	"port_forwarder/port_allocation_pool"
 	"strconv"
+	"strings"
 	"time"
 
 	"github.com/go-playground/validator"
 )
 
 var validate *validator.Validate
-var ipTablesExecutable (string)
+var pkillExecutable (string)
+var nodeExecutable (string)
 
 func init() {
 	validate = validator.New()
 	validate.RegisterValidation("ttlCustomValidator", ttlCustomValidator)
 	var err error
-	ipTablesExecutable, err = exec.LookPath("iptables")
+	pkillExecutable, err = exec.LookPath("pkill")
+	if err != nil {
+		panic(err)
+	}
+	nodeExecutable, err = exec.LookPath("nodejs")
 	if err != nil {
 		panic(err)
 	}
@@ -74,13 +80,13 @@ func NewRedirectFromJson(httpBody io.Reader) (*Redirect, error) {
 
 func (redirect *Redirect) AddRedirectToFirewall(portAllocationPool *port_allocation_pool.PortAllocationPool) error {
 	addPortCommand := exec.Cmd{
-		Path:   ipTablesExecutable,
-		Args:   redirect.iptablesArguments(AddRuleMode),
+		Path:   nodeExecutable,
+		Args:   redirect.proxyServerArguments(),
 		Stdout: os.Stdout,
 		Stderr: os.Stdout,
 	}
 
-	err := addPortCommand.Run()
+	err := addPortCommand.Start()
 	fmt.Println(addPortCommand)
 
 	if err != nil {
@@ -98,8 +104,8 @@ func (redirect *Redirect) AddRedirectToFirewall(portAllocationPool *port_allocat
 
 func (redirect *Redirect) RemoveRedirectFromFirewall(portAllocationPool *port_allocation_pool.PortAllocationPool) error {
 	removePortCommand := exec.Cmd{
-		Path:   ipTablesExecutable,
-		Args:   redirect.iptablesArguments(RemoveRuleMode),
+		Path:   pkillExecutable,
+		Args:   append([]string{pkillExecutable, "-f"}, strings.Join(redirect.proxyServerArguments(), " ")),
 		Stdout: os.Stdout,
 		Stderr: os.Stdout,
 	}
@@ -116,31 +122,13 @@ func (redirect *Redirect) RemoveRedirectFromFirewall(portAllocationPool *port_al
 	return err
 }
 
-func (redirect *Redirect) iptablesArguments(ruleMode RuleMode) []string {
-
-	operationString := "-D"
-	if ruleMode == AddRuleMode {
-		operationString = "-A"
-	}
-
+func (redirect *Redirect) proxyServerArguments() []string {
 	return []string{
-		ipTablesExecutable,
-		"-t",
-		"nat",
-		operationString,
-		"PREROUTING",
-		//		"-d",
-		//		redirect.ForwaredIp + "/32",
-		"-p",
-		"tcp",
-		"-m",
-		"tcp",
-		"--dport",
+		nodeExecutable,
+		"jsproxy.js",
 		strconv.Itoa(redirect.ForwardedPort),
-		"-j",
-		"DNAT",
-		"--to-destination",
-		redirect.DestIp + ":" + strconv.Itoa(redirect.DestPort),
+		redirect.DestIp,
+		strconv.Itoa(redirect.DestPort),
 	}
 
 }
