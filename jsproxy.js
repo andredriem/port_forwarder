@@ -47,7 +47,7 @@ function handleServerRequests(request, response){
 var server = http.createServer(handleServerRequests);
 server.listen(HOST_PORT);
 // Guarantee server is closed if program crashes or is finished
-process.on('uncaughtException', server.close);
+process.on('uncaughtException',(()=>{}));
 process.on('SIGTERM', server.close);
 
 
